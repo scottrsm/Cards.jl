@@ -185,17 +185,6 @@ end
 Base.isless(c1::Card, c2::Card) = c1.rank < c2.rank ? true : (c1.rank == c2.rank) ? (c1.suit < c2.suit) : false
 
 
-"""
-    get_single_cards(ph)
-
-Get the single cards from the poker hand, `ph`.
-
-## Arguments
--ph::PokerHand -- A given poker hand.
-
-## Return
-`::Vector{Card}` -- List of single cards.
-"""
 function get_single_cards(ph)
     cds = ph.cards
     rep = ph.gr_rep
@@ -211,26 +200,6 @@ function get_single_cards(ph)
 end
 
 ## Define `isless` for `PokerHand` 
-"""
-    Base.isless(p1,p2)
-
-Defines `isless` between two poker hands.
-
-**Note:** If the poker type and the groupings by 
-rank are the same, and if there are single
-cards (not paired/grouped with any other), then
-these cards are used to break the tie between 
-the two hands. The Card comparison uses 
-rank first and then suit to determine which 
-card is higher.
-
-## Arguments
-- `p1::PokerHand` -- First poker hand.
-- `p2::PokerHand` -- Second poker hand.
-
-## Return
-`::Bool`
-"""
 function Base.isless(p1::PokerHand, p2::PokerHand)  
     if p1.class < p2.class
         return(true)
