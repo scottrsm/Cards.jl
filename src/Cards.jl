@@ -128,19 +128,19 @@ This inner constructor takes a vector of cards:
 
 ## Fields 
 - `cards  :: Vector{Card}`
-- `gr_rep :: Vector{Tuple{Int64, Rank}}`
+- `gr_rep :: Vector{Tuple{Int, Rank}}`
 - `class  :: PokerType`
 
 ## Constructor
-- `PokerHand(::Vector{Card}; N::Int64=5)`
+- `PokerHand(::Vector{Card}; N::Int=5)`
 """
 struct PokerHand
     cards  :: Vector{Card}
-    gr_rep :: Vector{Tuple{Int64, Rank}}
+    gr_rep :: Vector{Tuple{Int, Rank}}
     class  :: PokerType 
 
     ## Constructor
-    function PokerHand(cds::Vector{Card}; N::Int64=5)
+    function PokerHand(cds::Vector{Card}; N::Int=5)
         scds   = poker_hand_contract(cds; N) ? sort(cds, rev=true) : throw(DomainError(cds, "Not a valid poker hand.\nEither duplicate cards or not the right number.\n"))
         gr_rep = grouped_rank_rep(scds)
         class  = classify_hand(gr_rep, scds)
@@ -155,20 +155,20 @@ end
 MUTABLE DATA STRUCTURE: Representation of a deck of cards.
 
 ## Fields 
-- place :: Int64        -- The place in the deck beyond which we may draw.
+- place :: Int        -- The place in the deck beyond which we may draw.
 - cds   :: Vector{Card} -- A vector of cards.
 
 ## Constructors
 - Deck() -- Creates the standard 52 card deck using the standard Card ordering.
-- Deck(place::Int64, cards::Vector{Card}) -- Create a deck of cards manually.
+- Deck(place::Int, cards::Vector{Card}) -- Create a deck of cards manually.
 """
 mutable struct Deck
-    place::Int64
+    place::Int
     cards::Vector{Card}
 
     ## Constructors
     Deck() = new(0, [Card(r, s) for s in instances(Suit) for r in instances(Rank)])
-    function Deck(p::Int64, cds::Vector{Card}) 
+    function Deck(p::Int, cds::Vector{Card}) 
         if length(cds) != length(Set(cds))
             throw(DomainError(cds, "There are duplicate cards in this prospective deck!"))
         end
@@ -245,12 +245,12 @@ Checks the following are true for `cds`:
 - `cds :: Vector{Card}` -- A vector of cards.
 
 ## Optional Arguments
-- `N=5 :: Int64` -- The number of cards that the hand should have.
+- `N=5 :: Int` -- The number of cards that the hand should have.
 
 ## Return
 `::Bool` -- `true` if `cds` are valid.
 """
-function poker_hand_contract(cds :: Vector{Card}; N::Int64=5)
+function poker_hand_contract(cds :: Vector{Card}; N::Int=5)
     ucds = collect(Set(cds))
     n = length(ucds)
     n != length(cds) && return(false)
@@ -294,12 +294,12 @@ In the process, removes `N` cards from the deck, `d`.
 - `d :: Deck` -- A Deck from which to deal.
 
 ## Keyword Arguments
-- `N=5 :: Int64` -- The number of cards to deal.
+- `N=5 :: Int` -- The number of cards to deal.
 
 ## Return
 `::PokerHand` -- A poker hand
 """
-function deal_hand!(d::Deck; N::Int64=5) :: PokerHand
+function deal_hand!(d::Deck; N::Int=5) :: PokerHand
     return(PokerHand(draw_cards!(d, N)))
 end
 
@@ -312,12 +312,12 @@ In the process, removes `N` cards from the deck, `d`.
 
 ## Arguments
 - `d :: Deck`  -- A Deck from which to draw.
-- `N :: Int64` -- The number of cards to draw.
+- `N :: Int` -- The number of cards to draw.
 
 ## Return
 `::Vector{Card}` -- A vector of Cards.
 """
-function draw_cards!(d::Deck, N::Int64) :: Vector{Card}
+function draw_cards!(d::Deck, N::Int) :: Vector{Card}
     if (d.place + N) > (length(d.cards) + d.place)
         throw(DomainError("Deck does not have enough cards left to draw $N cards."))
     end
@@ -364,7 +364,7 @@ Computes the number of cards left in deck, `d`.
 ## Return
 The number of cards left in the deck.
 """
-num_cards_left_in_deck(d::Deck) :: Int64 = NO_CARDS_IN_DECK - d.place
+num_cards_left_in_deck(d::Deck) :: Int = NO_CARDS_IN_DECK - d.place
 
 
 
@@ -389,9 +389,9 @@ The tuple representation is ordered from highest to lowest.
 becomes: `[(2, Nine), (1, King), (1, Jack), (1, Three)]`
 
 ## Return
-`::Vector{Tuple{Int64, Rank}}` -- A Vector of two-tuples. 
+`::Vector{Tuple{Int, Rank}}` -- A Vector of two-tuples. 
 """
-function grouped_rank_rep(cds::Vector{Card}) :: Vector{Tuple{Int64, Rank}}
+function grouped_rank_rep(cds::Vector{Card}) :: Vector{Tuple{Int, Rank}}
     lastRank = nothing
     lastSuit = nothing
     sameCnt  = 0
@@ -433,13 +433,13 @@ We know the following:
 - `|gr_rep| == 5` ``\\implies`` `HighCard     | Flush  | Straight | StraightFlush` 
 
 ## Arguments
-- `gr_rep :: Vector{Tuple{Int64, Rank}}`  -- The internal representation of the hand. (See `grouped_rank_rep`).
+- `gr_rep :: Vector{Tuple{Int, Rank}}`  -- The internal representation of the hand. (See `grouped_rank_rep`).
 - `cds    :: Vector{Card}`                -- Cards sorted by rank then suit.
 
 ## Returns
 `::PokerType`
 """
-function classify_hand(gr_rep::Vector{Tuple{Int64, Rank}}, cds::Vector{Card}) :: PokerType
+function classify_hand(gr_rep::Vector{Tuple{Int, Rank}}, cds::Vector{Card}) :: PokerType
     ## FourOfKind | FullHouse
     if length(gr_rep) == 2
         if length(gr_rep[1]) == 4
