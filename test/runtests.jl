@@ -2,7 +2,7 @@ using Test
 using Random
 using Cards
 
-@testset "Cards (Fidelity)" begin
+@testset "Cards (Fidelity)                               " begin
     @test length(detect_ambiguities(Cards)) == 0
 end
 
