@@ -155,7 +155,7 @@ end
 MUTABLE DATA STRUCTURE: Representation of a deck of cards.
 
 # Fields 
-- place :: Int        -- The place in the deck beyond which we may draw.
+- place :: Int          -- The place in the deck beyond which we may draw.
 - cds   :: Vector{Card} -- A vector of cards.
 
 # Constructors
@@ -178,9 +178,11 @@ end
 
 
 
-#---------------------------------------------------------------------------
-# ---------------------  AUGMENT BASE: isless, show   ----------------------
-#---------------------------------------------------------------------------
+#=---------------------------------------------------------------------------
+---------------------  AUGMENT BASE: isless, show   ----------------------
+---------------------------------------------------------------------------
+=#
+
 # Define `isless` for `Card`. 
 Base.isless(c1::Card, c2::Card) = c1.rank < c2.rank ? true : (c1.rank == c2.rank) ? (c1.suit < c2.suit) : false
 
@@ -206,9 +208,10 @@ function Base.isless(p1::PokerHand, p2::PokerHand)
     elseif p1.class == p2.class
         if p1.gr_rep < p2.gr_rep
             return(true)
-        # This means that even the single cards have the same rank.
-        # We now decide who is higher by suit 
-        # (actually done by comparing Cards as Suit is a secondary comparator.)
+        #= This means that even the single cards have the same rank.
+         We now decide who is higher by suit 
+         (actually done by comparing Cards as Suit is a secondary comparator.)
+		=#
         elseif p1.gr_rep == p2.gr_rep
             p1_singles = get_single_cards(p1)
             p2_singles = get_single_cards(p2)
@@ -229,9 +232,10 @@ Base.show(io::IO, ph::PokerHand) = print(io, "Cards = $([c for c in ph.cards])\n
 Base.:(==)(ph1::PokerHand, ph2::PokerHand) = (ph1.cards == ph2.cards) && (ph1.gr_rep == ph2.gr_rep) && (ph1.class == ph2.class)
 
 
-#---------------------------------------------------------------------------
-# ---------------------  FUNCTIONS   ---------------------------------------
-#---------------------------------------------------------------------------
+#=------------------------------------------------------------------------
+---------------------  FUNCTIONS   ---------------------------------------
+--------------------------------------------------------------------------
+=#
 """
     poker_hand_contract(cds; N=5)
 
@@ -513,12 +517,13 @@ function make_secondary_draw!(h::PokerHand, d::Deck) :: PokerHand
     # Will be new cards for hand after the potential draw. 
     nh = Card[]
 
-    # This will be the list of cards to eliminate.
-    # The cards will be represented by their rank as this
-    # uniquely defines (as the doc for grouped_rank_rep makes clear)
-    # cards that are not grouped. As these are the cards
-    # that we will look to for elimination the rank representation
-    # is a good one.
+    #= This will be the list of cards to eliminate.
+       The cards will be represented by their rank as this
+       uniquely defines (as the doc for grouped_rank_rep makes clear)
+       cards that are not grouped. As these are the cards
+       that we will look to for elimination the rank representation
+       is a good one.
+	=#
     eliminate_cards_by_rank = []
 
     # FourOfKind
