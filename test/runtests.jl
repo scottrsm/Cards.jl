@@ -11,7 +11,7 @@ end
     d = Deck()
     shuffle_deck!(d)
 
-    ## Manually construct 6 hands...
+    # Manually construct 6 hands...
     h1 = PokerHand([Card(Four, ♥ ), Card(Jack, ♦ ), Card(Six, ♣ ), Card(King, ♦ ), Card(Six, ♠ )])
     h2 = PokerHand([Card(Two, ♠ ), Card(Jack, ♥ ), Card(Ten, ♠ ), Card(Eight, ♦ ), Card(Ten, ♦ )])
     h3 = PokerHand([Card(Ace, ♣ ), Card(King, ♠ ), Card(Queen, ♦ ), Card(Jack, ♥ ), Card(Ten, ♣ )])

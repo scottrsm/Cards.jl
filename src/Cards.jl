@@ -209,8 +209,8 @@ function Base.isless(p1::PokerHand, p2::PokerHand)
         if p1.gr_rep < p2.gr_rep
             return(true)
         #= This means that even the single cards have the same rank.
-         We now decide who is higher by suit 
-         (actually done by comparing Cards as Suit is a secondary comparator.)
+           We now decide who is higher by suit 
+           (actually done by comparing Cards as Suit is a secondary comparator.)
 		=#
         elseif p1.gr_rep == p2.gr_rep
             p1_singles = get_single_cards(p1)
