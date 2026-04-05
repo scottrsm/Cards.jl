@@ -81,11 +81,11 @@ from lowest to highest.
 - HighCard
 - OnePair
 - TwoPair
-- ThreeOfAKind
+- ThreeOfKind
 - Straight
 - Flush
 - FullHouse
-- FourOfAKind
+- FourOfKind
 - StraightFlush
 """
 @enum PokerType HighCard OnePair TwoPair ThreeOfKind Straight Flush FullHouse FourOfKind StraightFlush
@@ -322,7 +322,7 @@ In the process, removes `N` cards from the deck, `d`.
 `::Vector{Card}` -- A vector of Cards.
 """
 function draw_cards!(d::Deck, N::Int) :: Vector{Card}
-    if (d.place + N) > (length(d.cards) + d.place)
+    if (d.place + N) > length(d.cards)
         throw(DomainError("Deck does not have enough cards left to draw $N cards."))
     end
     cds = [d.cards[d.place + i] for i in 1:N]  
@@ -397,13 +397,11 @@ becomes: `[(2, Nine), (1, King), (1, Jack), (1, Three)]`
 """
 function grouped_rank_rep(cds::Vector{Card}) :: Vector{Tuple{Int, Rank}}
     lastRank = nothing
-    lastSuit = nothing
     sameCnt  = 0
-    gr_rep   = []
+    gr_rep   = Tuple{Int, Rank}[]
     curRnk   = Two
-    curSuit  = ♠
     for i in eachindex(cds)
-        curRnk, curSuit = (cds[i].rank, cds[i].suit)
+        curRnk = cds[i].rank
         if lastRank === curRnk
             sameCnt += 1
         else 
@@ -412,7 +410,6 @@ function grouped_rank_rep(cds::Vector{Card}) :: Vector{Tuple{Int, Rank}}
             end
             sameCnt  = 1
             lastRank = curRnk
-            lastSuit = curSuit
         end
     end
     if sameCnt != 0
@@ -446,7 +443,7 @@ We know the following:
 function classify_hand(gr_rep::Vector{Tuple{Int, Rank}}, cds::Vector{Card}) :: PokerType
     # FourOfKind | FullHouse
     if length(gr_rep) == 2
-        if length(gr_rep[1]) == 4
+        if gr_rep[1][1] == 4
             return(FourOfKind)
         else
             return(FullHouse )
@@ -454,7 +451,7 @@ function classify_hand(gr_rep::Vector{Tuple{Int, Rank}}, cds::Vector{Card}) :: P
 
     # TwoPair | ThreeOfKind
     elseif length(gr_rep) == 3
-        if length(gr_rep[1]) == 3
+        if gr_rep[1][1] == 3
             return(ThreeOfKind)
         else
             return(TwoPair    )
@@ -464,7 +461,7 @@ function classify_hand(gr_rep::Vector{Tuple{Int, Rank}}, cds::Vector{Card}) :: P
     elseif length(gr_rep) == 4
         return(OnePair)
 
-    # HighCard | Flush | Straight | StraightFlish
+    # HighCard | Flush | Straight | StraightFlush
     elseif length(gr_rep) == 5
         isFlush    = false
         isStraight = false
@@ -490,6 +487,8 @@ function classify_hand(gr_rep::Vector{Tuple{Int, Rank}}, cds::Vector{Card}) :: P
         else
             return(HighCard      )
         end
+    else
+        throw(DomainError(gr_rep, "Unexpected grouped rank representation length: $(length(gr_rep))"))
     end
 
 end
@@ -524,7 +523,7 @@ function make_secondary_draw!(h::PokerHand, d::Deck) :: PokerHand
        that we will look to for elimination the rank representation
        is a good one.
 	=#
-    eliminate_cards_by_rank = []
+    eliminate_cards_by_rank = Rank[]
 
     # FourOfKind
     if (length(h.gr_rep) == 2) && (h.gr_rep[1][1] == 4)
@@ -560,7 +559,7 @@ function make_secondary_draw!(h::PokerHand, d::Deck) :: PokerHand
     # Now gather all cards in the current hand that are NOT in the elimination set.
     # Push them onto the new list of cards.
     for c in h.cards
-        if ~ (c.rank in eliminate_cards_by_rank)
+        if !(c.rank in eliminate_cards_by_rank)
             push!(nh, c)
          end
     end
@@ -612,8 +611,10 @@ function play_poker!(d::Deck) :: Nothing
     println("BEFORE Players are given a chance at card replacement:")
     if h1 < h2
         println("Player 2 wins!")
-    else
+    elseif h2 < h1
         println("Player 1 wins!")
+    else
+        println("It's a tie!")
     end
 
     # Allow each player a chance at replacing up to two cards.
@@ -628,8 +629,10 @@ function play_poker!(d::Deck) :: Nothing
     # Now compare the new hands.
     if nh1 < nh2
         println("Player 2 wins!")
-    else
+    elseif nh2 < nh1
         println("Player 1 wins!")
+    else
+        println("It's a tie!")
     end
     
     return(nothing)
