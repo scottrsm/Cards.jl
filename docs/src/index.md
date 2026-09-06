@@ -93,7 +93,7 @@ play_poker!
 ## Lower Level Functions
 The Base function `isless` has been overloaded for
 the Structs: `Card`, and `PokerHand`.
-- This means that a vector of `Card` is sorted first by `Suit` and then `Rank`.
+- This means that a vector of `Card` is sorted first by `Rank` and then `Suit`.
 - This means that a vector of `PokerHand` is sorted by the strength of the 
   hand as measured by the game Poker.
 

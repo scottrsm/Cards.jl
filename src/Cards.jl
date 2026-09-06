@@ -2,7 +2,7 @@
     Module Cards:
     Functions to define cards, a card deck, shuffle the deck, deal from 
     the deck, poker card comparison, and poker hand representations.
-    Can reset the deck, pulling in all cards from a previous game.
+    Can reset the deck, so that all cards dealt in a previous game are available again.
     Additionally, can play a round of vanilla poker with two players.
 """
 
@@ -100,11 +100,11 @@ from lowest to highest.
 DATA STRUCTURE: Representation of a Card.
 
 # Fields 
-- suit :: Suit
 - rank :: Rank
+- suit :: Suit
 
 # Constructors
-- Card(::Suit, ::Rank)
+- Card(::Rank, ::Suit)
 """
 struct Card
     rank::Rank
@@ -115,7 +115,7 @@ end
 """
     PokerHand
 
-DATA STRUCTURE: Representation of a Card.
+DATA STRUCTURE: Representation of a (5 card) poker hand.
     
 This inner constructor takes a vector of cards:
 - Checks the input contract:
@@ -132,7 +132,7 @@ This inner constructor takes a vector of cards:
 - `class  :: PokerType`
 
 # Constructor
-- `PokerHand(::Vector{Card}; N::Int=5)`
+- `PokerHand(::Vector{Card})` -- exactly 5 distinct cards.
 """
 struct PokerHand
     cards  :: Vector{Card}
@@ -140,8 +140,8 @@ struct PokerHand
     class  :: PokerType 
 
     # Constructor
-    function PokerHand(cds::Vector{Card}; N::Int=5)
-        scds   = poker_hand_contract(cds; N) ? sort(cds, rev=true) : throw(DomainError(cds, "Not a valid poker hand.\nEither duplicate cards or not the right number.\n"))
+    function PokerHand(cds::Vector{Card})
+        scds   = poker_hand_contract(cds) ? sort(cds, rev=true) : throw(DomainError(cds, "Not a valid poker hand.\nEither duplicate cards or not the right number (5).\n"))
         gr_rep = grouped_rank_rep(scds)
         class  = classify_hand(gr_rep, scds)
         return(new(scds, gr_rep, class))
@@ -160,7 +160,7 @@ MUTABLE DATA STRUCTURE: Representation of a deck of cards.
 
 # Constructors
 - Deck() -- Creates the standard 52 card deck using the standard Card ordering.
-- Deck(place::Int, cards::Vector{Card}) -- Create a deck of cards manually.
+- Deck(place::Int, cards::Vector{Card}) -- Create a deck of cards manually; `0 <= place <= length(cards)`.
 """
 mutable struct Deck
     place::Int
@@ -171,6 +171,9 @@ mutable struct Deck
     function Deck(p::Int, cds::Vector{Card}) 
         if length(cds) != length(Set(cds))
             throw(DomainError(cds, "There are duplicate cards in this prospective deck!"))
+        end
+        if !(0 <= p <= length(cds))
+            throw(DomainError(p, "The deck place must be in the range [0, $(length(cds))]."))
         end
         new(p, cds)
     end
@@ -187,7 +190,7 @@ end
 Base.isless(c1::Card, c2::Card) = c1.rank < c2.rank ? true : (c1.rank == c2.rank) ? (c1.suit < c2.suit) : false
 
 
-function get_single_cards(ph)
+function get_single_cards(ph::PokerHand)
     cds = ph.cards
     rep = ph.gr_rep
     single_rnks = [r for (n, r) in rep if n == 1]
@@ -201,35 +204,42 @@ function get_single_cards(ph)
     return(singles)
 end
 
+# Is this (sorted, high to low) rank sequence the Ace-low straight ("wheel"): A 5 4 3 2?
+is_wheel(gr_rep::Vector{Tuple{Int, Rank}}) = length(gr_rep) == 5 && gr_rep[1][2] == Ace && gr_rep[2][2] == Five
+
+# The high card of a straight: `Five` for the wheel, otherwise the top rank.
+straight_high(ph::PokerHand) = is_wheel(ph.gr_rep) ? Five : ph.gr_rep[1][2]
+
 # Define `isless` for `PokerHand` 
 function Base.isless(p1::PokerHand, p2::PokerHand)  
-    if p1.class < p2.class
-        return(true)
-    elseif p1.class == p2.class
-        if p1.gr_rep < p2.gr_rep
-            return(true)
-        #= This means that even the single cards have the same rank.
-           We now decide who is higher by suit 
-           (actually done by comparing Cards as Suit is a secondary comparator.)
-		=#
-        elseif p1.gr_rep == p2.gr_rep
-            p1_singles = get_single_cards(p1)
-            p2_singles = get_single_cards(p2)
-            return(p1_singles < p2_singles)
-        else
-            return(false)
-        end
-    else
-        return(false)
+    if p1.class != p2.class
+        return(p1.class < p2.class)
     end
+
+    # Same class: compare the grouped ranks; a straight is ranked by its high card
+    # (the Ace-low straight is the lowest straight).
+    if p1.class == Straight || p1.class == StraightFlush
+        h1 = straight_high(p1)
+        h2 = straight_high(p2)
+        h1 != h2 && return(h1 < h2)
+    elseif p1.gr_rep != p2.gr_rep
+        return(p1.gr_rep < p2.gr_rep)
+    end
+
+    #= This means that even the single cards have the same rank.
+       We now decide who is higher by suit 
+       (actually done by comparing Cards as Suit is a secondary comparator.)
+	=#
+    return(get_single_cards(p1) < get_single_cards(p2))
 end
 
 # Show methods for `Card` and `PokerHand`.
 Base.show(io::IO, c::Card)       = print(io, "$(c.suit) $(c.rank)")
-Base.show(io::IO, ph::PokerHand) = print(io, "Cards = $([c for c in ph.cards])\nGrouped_Rank_Rep = $(ph.gr_rep)\nClassification = $(ph.class)")
+Base.show(io::IO, ph::PokerHand) = print(io, "Cards = $(ph.cards)\nGrouped_Rank_Rep = $(ph.gr_rep)\nClassification = $(ph.class)")
 
-# Define `(==)` for PokerHand
+# Define `(==)` and a matching `hash` for PokerHand
 Base.:(==)(ph1::PokerHand, ph2::PokerHand) = (ph1.cards == ph2.cards) && (ph1.gr_rep == ph2.gr_rep) && (ph1.class == ph2.class)
+Base.hash(ph::PokerHand, h::UInt) = hash(ph.cards, hash(ph.gr_rep, hash(ph.class, hash(:PokerHand, h))))
 
 
 #=------------------------------------------------------------------------
@@ -255,8 +265,7 @@ Checks the following are true for `cds`:
 `::Bool` -- `true` if `cds` are valid.
 """
 function poker_hand_contract(cds :: Vector{Card}; N::Int=5)
-    ucds = collect(Set(cds))
-    n = length(ucds)
+    n = length(Set(cds))
     n != length(cds) && return(false)
     n != N           && return(false)
     return(true)
@@ -264,7 +273,7 @@ end
 
 
 """
-    shuffle_deck!(d)
+    shuffle_deck!(d[; rng=Random.default_rng()])
 
 Shuffles the Deck, `d`, destructively; that is, the deck is changed as 
 a result of this function.
@@ -277,34 +286,34 @@ not interfere with current and previous `shuffle_deck!`.
 # Arguments
 - `d :: Deck` -- The deck to shuffle.
 
+# Keyword Arguments
+- `rng :: Random.AbstractRNG` -- The random number generator to use (default: the global one).
+
 # Return
 `nothing`
 """
-function shuffle_deck!(d::Deck) :: Nothing
-    Random.shuffle!(@view d.cards[(1+d.place):end])
+function shuffle_deck!(d::Deck; rng::Random.AbstractRNG=Random.default_rng()) :: Nothing
+    Random.shuffle!(rng, @view d.cards[(1+d.place):end])
     return(nothing)
 end
 
 
 
 """
-    deal_hand!(d; N=5)
+    deal_hand!(d)
 
-Deals a hand from a deck, `d`, creating a PokerHand.
+Deals a (5 card) hand from a deck, `d`, creating a PokerHand.
 
-In the process, removes `N` cards from the deck, `d`.
+In the process, removes 5 cards from the deck, `d`.
 
 # Arguments
 - `d :: Deck` -- A Deck from which to deal.
 
-# Keyword Arguments
-- `N=5 :: Int` -- The number of cards to deal.
-
 # Return
 `::PokerHand` -- A poker hand
 """
-function deal_hand!(d::Deck; N::Int=5) :: PokerHand
-    return(PokerHand(draw_cards!(d, N)))
+function deal_hand!(d::Deck) :: PokerHand
+    return(PokerHand(draw_cards!(d, 5)))
 end
 
 
@@ -316,14 +325,17 @@ In the process, removes `N` cards from the deck, `d`.
 
 # Arguments
 - `d :: Deck`  -- A Deck from which to draw.
-- `N :: Int` -- The number of cards to draw.
+- `N :: Int` -- The number of cards to draw (`N >= 0`).
 
 # Return
 `::Vector{Card}` -- A vector of Cards.
 """
 function draw_cards!(d::Deck, N::Int) :: Vector{Card}
+    if N < 0
+        throw(DomainError(N, "The number of cards to draw must be non-negative."))
+    end
     if (d.place + N) > length(d.cards)
-        throw(DomainError("Deck does not have enough cards left to draw $N cards."))
+        throw(DomainError(N, "Deck does not have enough cards left to draw $N cards (only $(num_cards_left_in_deck(d)) left)."))
     end
     cds = [d.cards[d.place + i] for i in 1:N]  
     d.place += N
@@ -342,7 +354,7 @@ Reset the Deck, `d`, to have all of the cards placed back into the deck.
   a Deck.
 
 # Note
-- The cards that have been previous delt will be replaced; however,
+- The cards that have been previously dealt will be replaced; however,
 previous calls to shuffle_deck! will remain in effect.
 
 # Arguments
@@ -368,7 +380,7 @@ Computes the number of cards left in deck, `d`.
 # Return
 The number of cards left in the deck.
 """
-num_cards_left_in_deck(d::Deck) :: Int = NO_CARDS_IN_DECK - d.place
+num_cards_left_in_deck(d::Deck) :: Int = length(d.cards) - d.place
 
 
 
@@ -383,8 +395,9 @@ The tuple representation is ordered from highest to lowest.
 
 **NOTE:** When `N==1` the corresponding rank *uniquely* determines the card in the hand.
 
-# Input Contract
-- Cards are *ASSUMED* sorted via `Base.isless(Card, Card)`.
+# Note
+- The cards are sorted (high to low, via `Base.isless(Card, Card)`) before grouping,
+  so the input may be in any order.
 
 # Arguments
 - `cds :: Vector{Card}` -- A Vector of Card.
@@ -396,34 +409,32 @@ becomes: `[(2, Nine), (1, King), (1, Jack), (1, Three)]`
 `::Vector{Tuple{Int, Rank}}` -- A Vector of two-tuples. 
 """
 function grouped_rank_rep(cds::Vector{Card}) :: Vector{Tuple{Int, Rank}}
-    lastRank = nothing
+    gr_rep = Tuple{Int, Rank}[]
+    isempty(cds) && return(gr_rep)
+
+    scds     = issorted(cds, rev=true) ? cds : sort(cds, rev=true)
+    lastRank = scds[1].rank
     sameCnt  = 0
-    gr_rep   = Tuple{Int, Rank}[]
-    curRnk   = Two
-    for i in eachindex(cds)
-        curRnk = cds[i].rank
-        if lastRank === curRnk
+    for c in scds
+        if c.rank == lastRank
             sameCnt += 1
         else 
-            if sameCnt != 0
-                push!(gr_rep, (sameCnt, lastRank))
-            end
+            push!(gr_rep, (sameCnt, lastRank))
             sameCnt  = 1
-            lastRank = curRnk
+            lastRank = c.rank
         end
     end
-    if sameCnt != 0
-        push!(gr_rep, (sameCnt, lastRank))
-    end
+    push!(gr_rep, (sameCnt, lastRank))
 
     return(sort(gr_rep, rev=true))
 end
 
 
 """
-    classify_hand(gr_rep)
+    classify_hand(gr_rep, cds)
 
 Classifies a poker hand into one of the standard classes given by the enumeration: `PokerType`.
+The Ace-low straight (A 5 4 3 2, the "wheel") is recognised as a `Straight` (or `StraightFlush`).
 
 This is done by first examining the length of the grouped rank representation, `gr_rep`.
 
@@ -471,9 +482,11 @@ function classify_hand(gr_rep::Vector{Tuple{Int, Rank}}, cds::Vector{Card}) :: P
             isFlush = true
         end
 
-        # Test for Straight (cds cards are ordered from high to low)
-        # Therefore, diff should yield 4 -1's, the sum of that vector should be -4.
-        if sum(diff([Int(cd.rank) for cd in cds])) == -4
+        # Test for Straight (cds cards are ordered from high to low, with 5 distinct ranks)
+        # Therefore, each rank should be one less than the previous one; or, the hand is the
+        # Ace-low straight: A 5 4 3 2.
+        ranks = [Int(cd.rank) for cd in cds]
+        if all(ranks[i] - ranks[i+1] == 1 for i in 1:4) || ranks == [Int(Ace), Int(Five), Int(Four), Int(Three), Int(Two)]
             isStraight = true
         end
 
@@ -549,9 +562,9 @@ function make_secondary_draw!(h::PokerHand, d::Deck) :: PokerHand
         push!(eliminate_cards_by_rank, h.gr_rep[3][2]) 
         push!(eliminate_cards_by_rank, h.gr_rep[4][2]) 
 
-    # HighCard
-    elseif length(h.gr_rep) == 5
-        # Eliminate 2 cards. OnePair.
+    # HighCard -- (a Straight, Flush, or StraightFlush also has 5 distinct ranks; keep those as they are.)
+    elseif h.class == HighCard
+        # Eliminate 2 cards (the two lowest).
         push!(eliminate_cards_by_rank, h.gr_rep[4][2]) 
         push!(eliminate_cards_by_rank, h.gr_rep[5][2]) 
     end
@@ -573,7 +586,7 @@ end
 
 
 """
-    play_poker!(d)
+    play_poker!(d[; rng=Random.default_rng()])
 
 Play a game of poker with two players.
 
@@ -589,15 +602,18 @@ Process:
 # Arguments
 `d :: Deck` -- A deck of cards.
 
+# Keyword Arguments
+- `rng :: Random.AbstractRNG` -- The random number generator used to shuffle (default: the global one).
+
 # Return
 `::Nothing`
 """
-function play_poker!(d::Deck) :: Nothing
+function play_poker!(d::Deck; rng::Random.AbstractRNG=Random.default_rng()) :: Nothing
     # Reset the deck -- put back all the cards from previous games.
     restore_deck!(d)
 
     # Shuffle the deck.
-    shuffle_deck!(d)
+    shuffle_deck!(d; rng)
 
     # Deal poker hands for two players.
     h1 = deal_hand!(d)
