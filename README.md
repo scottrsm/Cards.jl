@@ -1,10 +1,12 @@
 # Cards.jl
 
-[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://scottrsm.github.io/Cards.jl/dev/)
+[![Docs (stable)](https://img.shields.io/badge/docs-stable-blue.svg)](https://scottrsm.github.io/Cards.jl/stable/)
+[![Docs (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://scottrsm.github.io/Cards.jl/dev/)
 
 A Julia package to play a version of Poker.
 
 ## Documentation
+- HTML (stable, v1.1.0): https://scottrsm.github.io/Cards.jl/stable/
 - HTML (latest, built from `main`): https://scottrsm.github.io/Cards.jl/dev/
 - Markdown source: [docs/src/index.md](docs/src/index.md)
 
